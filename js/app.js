@@ -49,37 +49,69 @@
     var host = el("ticker");
     if (!host) return;
     var catalog = ticketRows();
-    host.innerHTML = catalog
-      .map(function (t) {
-        return (
-          '<div class="tick" data-date="' +
+    var byS = {};
+    catalog.forEach(function (t) {
+      if (!byS[t.sessionNumber]) {
+        byS[t.sessionNumber] = { sessionNumber: t.sessionNumber, date: t.date, dayNight: t.dayNight, cells: {} };
+      }
+      byS[t.sessionNumber].cells[t.venue] = t;
+    });
+    var cols = ["Arthur Ashe", "Louis Armstrong", "Grandstand", "Grounds"];
+    var html = "";
+    for (var n = 1; n <= 27; n++) {
+      var row = byS[n];
+      if (!row) continue;
+      var on = state.date === row.date && state.dayNight === row.dayNight;
+      html +=
+        '<div class="sess-col' +
+        (on ? " on" : "") +
+        '" data-date="' +
+        row.date +
+        '" data-dn="' +
+        row.dayNight +
+        '"><div class="hd">Session ' +
+        n +
+        '<span>' +
+        row.date.slice(5) +
+        " " +
+        row.dayNight +
+        "</span></div>";
+      cols.forEach(function (venue) {
+        var t = row.cells[venue];
+        if (!t) {
+          html += '<div class="sku na"><span>' + ENG.venueShort(venue) + "</span><span>not sold</span></div>";
+          return;
+        }
+        html +=
+          '<button class="sku" type="button" data-date="' +
           t.date +
           '" data-dn="' +
           t.dayNight +
           '" data-venue="' +
-          t.venue +
-          '"><div class="v">S' +
-          t.sessionNumber +
-          " " +
-          t.dayNight +
-          " · " +
-          ENG.venueShort(t.venue) +
-          '</div><div class="p">' +
-          money(t.resale) +
-          " <span class='" +
+          venue +
+          '"><span>' +
+          ENG.venueShort(venue) +
+          "</span><span class='" +
           dirClass(t.direction) +
           "'>" +
+          money(t.resale) +
+          " " +
           dirArrow(t.direction) +
-          "</span></div></div>"
-        );
-      })
-      .join("");
-    host.querySelectorAll(".tick[data-date]").forEach(function (tick) {
-      tick.addEventListener("click", function () {
-        state.date = tick.getAttribute("data-date");
-        state.dayNight = tick.getAttribute("data-dn");
-        state.focusVenue = tick.getAttribute("data-venue");
-        render();
+          "</span></button>";
+      });
+      html += "</div>";
+    }
+    host.innerHTML = html;
+    host.querySelectorAll(".sku[data-date], .sess-col").forEach(function (node) {
+      node.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        var t = ev.currentTarget;
+        if (t.getAttribute("data-date")) {
+          state.date = t.getAttribute("data-date");
+          state.dayNight = t.getAttribute("data-dn");
+          if (t.getAttribute("data-venue")) state.focusVenue = t.getAttribute("data-venue");
+          render();
+        }
       });
     });
   }

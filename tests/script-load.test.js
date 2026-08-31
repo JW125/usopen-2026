@@ -67,6 +67,9 @@ describe("browser script load without Node module/require", () => {
     assert.match(String(venues.innerHTML), /grounds/i);
     assert.match(String(venues.innerHTML), /Camera \/ crowd/);
     assert.ok(String(ticker.innerHTML).length > 50);
+    assert.match(String(ticker.innerHTML), /Session 1/);
+    assert.match(String(ticker.innerHTML), /Session 27/);
+    assert.match(String(ticker.innerHTML), /not sold/);
     assert.ok(!ctx.window.module, "browser sandbox must not define Node module");
   });
 });
