@@ -786,17 +786,24 @@ function session(id, date, dayNight, venues, extra) {
   );
 }
 
+const ARMSTRONG_TICKETS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17]);
+const GRANDSTAND_TICKETS = new Set([1, 3, 5, 7, 9, 11, 13]);
+
 function ven(name, matches, opts) {
   opts = opts || {};
-  const ticketed = name === "Grounds" || ["Arthur Ashe", "Louis Armstrong", "Grandstand", "Stadium 17"].includes(name);
+  const ticketed =
+    opts.ticketed != null
+      ? opts.ticketed
+      : name === "Grounds" || name === "Arthur Ashe" || name === "Louis Armstrong" || name === "Grandstand";
   return {
     name,
     ticketed,
-    kind: name === "Grounds" ? "grounds" : ticketed ? "stadium" : "field",
+    kind: name === "Grounds" ? "grounds" : ticketed || name === "Grandstand" ? "stadium" : name === "Stadium 17" ? "field" : ticketed ? "stadium" : "field",
     matches,
     price: opts.price || null,
     crowd: opts.crowd || crowd(40, "Filling"),
     camera: camera(name),
+    ticketNote: opts.ticketNote || "",
   };
 }
 
@@ -818,14 +825,14 @@ session(
       crowd: crowd(74, "Busy"),
     }),
     ven("Stadium 17", [done("majchrzak", "medjedovic", "majchrzak", "6-3 6-3 6-3")], {
-      price: price(90, 130, 220),
+      ticketed: false,
       crowd: crowd(61, "Open seats"),
     }),
     ven("Court 5", [done("paul", "wong", "paul", "6-7(3) 6-1 6-3 6-3")], { crowd: crowd(70, "Standing room forming") }),
     ven("Court 7", [done("merida", "fucsovics", "merida", "6-4 6-4 6-2")], { crowd: crowd(55, "Walk-up") }),
     ven("Grounds", [], { price: price(65, 249, 360), crowd: crowd(79, "Grounds humming") }),
   ],
-  { groundsPrice: 249, groundsList: 65, price: price(250, 310, 720) }
+  { sessionNumber: 1, groundsPrice: 249, groundsList: 65, price: price(250, 310, 720) }
 );
 
 session(
@@ -843,17 +850,18 @@ session(
       crowd: crowd(77, "Night buzz"),
     }),
     ven("Grandstand", [done("vanassche", "norrie", "vanassche", "6-7(6) 6-2 6-2 6-3")], {
-      price: price(120, 165, 300),
+      ticketed: false,
+      ticketNote: "Covered by Session 1 Grandstand day ticket",
       crowd: crowd(58, "Thinning"),
     }),
     ven("Stadium 17", [done("faria", "brooksby", "faria", "6-3 7-6(4) 4-6 1-6 6-2")], {
-      price: price(70, 95, 180),
+      ticketed: false,
       crowd: crowd(42, "Late session"),
     }),
     ven("Court 6", [done("wu", "walton", "wu", "7-6(2) 6-2 7-5")], { crowd: crowd(38, "Lights on") }),
     ven("Grounds", [], { price: price(65, 180, 280), crowd: crowd(64, "Night grounds") }),
   ],
-  { groundsPrice: 180, groundsList: 65, price: price(280, 340, 890) }
+  { sessionNumber: 2, groundsPrice: 180, groundsList: 65, price: price(280, 340, 890) }
 );
 
 session(
@@ -874,7 +882,7 @@ session(
       crowd: crowd(76, "Wawrinka farewell building"),
     }),
     ven("Stadium 17", [live("zheng", "liutova", "2-3"), m("nakashima", "baez", { order: 2 }), m("stephens", "tauson", { order: 3 }), m("borges", "tien", { order: 4 })], {
-      price: price(95, 140, 260),
+      ticketed: false,
       crowd: crowd(63, "Americans on deck"),
     }),
     ven("Court 5", [m("bejlek", "bucsa"), m("blinkova", "kalinskaya"), m("darderi", "wendelken"), m("mensik", "mochizuki")], {
@@ -899,7 +907,7 @@ session(
     ven("Court 15", [m("kalinina", "sakatsume"), m("ito", "selekhmeteva"), m("svrcina", "royer")], { crowd: crowd(33, "Shade seekers") }),
     ven("Grounds", [], { price: price(65, 234, 360), crowd: crowd(82, "Labor Day crush") }),
   ],
-  { groundsPrice: 234, groundsList: 65, price: price(275, 275, 680) }
+  { sessionNumber: 3, groundsPrice: 234, groundsList: 65, price: price(275, 275, 680) }
 );
 
 session(
@@ -916,18 +924,19 @@ session(
       crowd: crowd(71, "Iga + Tiafoe"),
     }),
     ven("Grandstand", [m("faa", "hijikata", { order: 1, start: "not before 22:00" })], {
-      price: price(110, 140, 280),
+      ticketed: false,
+      ticketNote: "Covered by Session 3 Grandstand day ticket",
       crowd: crowd(40, "Holds for FAA"),
     }),
     ven("Stadium 17", [m("borges", "tien", { order: 1 })], {
-      price: price(70, 95, 175),
+      ticketed: false,
       crowd: crowd(34, "Late Tien"),
     }),
     ven("Court 5", [m("mensik", "mochizuki")], { crowd: crowd(28, "Night outer") }),
     ven("Court 12", [m("dimitrov", "popyrin")], { crowd: crowd(31, "Night outer") }),
     ven("Grounds", [], { price: price(65, 248, 320), crowd: crowd(60, "Evening grounds") }),
   ],
-  { groundsPrice: 248, groundsList: 65, price: price(99, 99, 650) }
+  { sessionNumber: 4, groundsPrice: 248, groundsList: 65, price: price(99, 99, 650) }
 );
 
 session(
@@ -948,7 +957,7 @@ session(
       crowd: crowd(62, "Keys"),
     }),
     ven("Stadium 17", [m("jovic", "frech"), m("cobolli", "comesana")], {
-      price: price(85, 120, 210),
+      ticketed: false,
       crowd: crowd(50, "Rising Americans"),
     }),
     ven("Court 6", [m("rybakina", "frodin"), m("sakkari", "montgomery")], { crowd: crowd(48, "Rybakina walk-up") }),
@@ -956,7 +965,7 @@ session(
     ven("Court 11", [m("kasatkina", "badosa"), m("jodar", "kokkinakis")], { crowd: crowd(39, "Open") }),
     ven("Grounds", [], { price: price(65, 244, 340), crowd: crowd(75, "Tuesday grounds") }),
   ],
-  { groundsPrice: 244, groundsList: 65, price: price(260, 290, 640) }
+  { sessionNumber: 5, groundsPrice: 244, groundsList: 65, price: price(260, 290, 640) }
 );
 
 session(
@@ -972,91 +981,97 @@ session(
       price: price(140, 180, 390),
       crowd: crowd(66, "Coco overflow"),
     }),
-    ven("Grandstand", [m("keys", "korneeva")], { price: price(95, 125, 240), crowd: crowd(45, "Keys late") }),
-    ven("Stadium 17", [m("eala", "stoiana")], { price: price(60, 80, 150), crowd: crowd(30, "Quiet") }),
+    ven("Grandstand", [m("keys", "korneeva")], {
+      ticketed: false,
+      ticketNote: "Covered by Session 5 Grandstand day ticket",
+      crowd: crowd(45, "Keys late"),
+    }),
+    ven("Stadium 17", [m("eala", "stoiana")], { ticketed: false, crowd: crowd(30, "Quiet") }),
     ven("Court 10", [m("sakkari", "montgomery")], { crowd: crowd(22, "Night field") }),
     ven("Grounds", [], { price: price(65, 160, 240), crowd: crowd(52, "Weeknight") }),
   ],
-  { groundsPrice: 160, groundsList: 65, price: price(120, 150, 520) }
+  { sessionNumber: 6, groundsPrice: 160, groundsList: 65, price: price(120, 150, 520) }
 );
 
-const futureDays = [
-  ["2026-09-02", "R64", 240, 80],
-  ["2026-09-03", "R64", 230, 85],
-  ["2026-09-04", "R32", 260, 95],
-  ["2026-09-05", "R32", 280, 110],
-  ["2026-09-06", "R16", 320, 140],
-  ["2026-09-07", "R16", 340, 150],
-  ["2026-09-08", "QF", 410, 180],
-  ["2026-09-09", "QF", 430, 190],
-  ["2026-09-10", "rest", 200, 90],
-  ["2026-09-11", "SF", 520, 220],
-  ["2026-09-12", "W Final", 680, 280],
-  ["2026-09-13", "M Final", 820, 310],
-];
+const SESSION_META = {
+  7: { date: "2026-09-02", dayNight: "day", round: "R64", ashe: 240, grounds: 80 },
+  8: { date: "2026-09-02", dayNight: "night", round: "R64", ashe: 210, grounds: 70 },
+  9: { date: "2026-09-03", dayNight: "day", round: "R64", ashe: 230, grounds: 85 },
+  10: { date: "2026-09-03", dayNight: "night", round: "R64", ashe: 200, grounds: 72 },
+  11: { date: "2026-09-04", dayNight: "day", round: "R32", ashe: 260, grounds: 95 },
+  12: { date: "2026-09-04", dayNight: "night", round: "R32", ashe: 280, grounds: 88 },
+  13: { date: "2026-09-05", dayNight: "day", round: "R32", ashe: 280, grounds: 110 },
+  14: { date: "2026-09-05", dayNight: "night", round: "R32", ashe: 300, grounds: 95 },
+  15: { date: "2026-09-06", dayNight: "day", round: "R16", ashe: 320, grounds: 140 },
+  16: { date: "2026-09-06", dayNight: "night", round: "R16", ashe: 380, grounds: 120 },
+  17: { date: "2026-09-07", dayNight: "day", round: "R16", ashe: 340, grounds: 150 },
+  18: { date: "2026-09-07", dayNight: "night", round: "R16", ashe: 400, grounds: 130 },
+  19: { date: "2026-09-08", dayNight: "day", round: "QF", ashe: 410, grounds: 180 },
+  20: { date: "2026-09-08", dayNight: "night", round: "QF", ashe: 520, grounds: 160 },
+  21: { date: "2026-09-09", dayNight: "day", round: "QF", ashe: 430, grounds: 190 },
+  22: { date: "2026-09-09", dayNight: "night", round: "QF", ashe: 560, grounds: 170 },
+  23: { date: "2026-09-10", dayNight: "night", round: "SF", ashe: 480, grounds: 140 },
+  24: { date: "2026-09-11", dayNight: "day", round: "SF", ashe: 520, grounds: 220 },
+  25: { date: "2026-09-11", dayNight: "night", round: "SF", ashe: 640, grounds: 200 },
+  26: { date: "2026-09-12", dayNight: "day", round: "W Final", ashe: 680, grounds: 280 },
+  27: { date: "2026-09-13", dayNight: "day", round: "M Final", ashe: 820, grounds: 310 },
+};
 
-let sid = 7;
-for (const [date, round, asheDay, grounds] of futureDays) {
-  session(
-    "s" + sid + "-day",
-    date,
-    "day",
-    [
-      ven("Arthur Ashe", [{ player1Id: null, player2Id: null, status: "projected", round, order: 1, note: round + " — names fill from the live bracket" }], {
-        price: price(Math.round(asheDay * 0.7), asheDay, Math.round(asheDay * 2.2)),
-        crowd: crowd(50, "Projected"),
-      }),
-      ven("Louis Armstrong", [{ player1Id: null, player2Id: null, status: "projected", round, order: 1 }], {
-        price: price(Math.round(asheDay * 0.45), Math.round(asheDay * 0.7), Math.round(asheDay * 1.4)),
-        crowd: crowd(45, "Projected"),
-      }),
-      ven("Grandstand", [{ player1Id: null, player2Id: null, status: "projected", round }], {
-        price: price(90, Math.round(asheDay * 0.4), Math.round(asheDay * 0.9)),
+for (const n of Object.keys(SESSION_META).map(Number).sort((a, b) => a - b)) {
+  const meta = SESSION_META[n];
+  const round = meta.round;
+  const empty = [{ player1Id: null, player2Id: null, status: "projected", round, order: 1 }];
+  const venues = [
+    ven("Arthur Ashe", empty, {
+      ticketed: true,
+      price: price(Math.round(meta.ashe * 0.55), meta.ashe, Math.round(meta.ashe * 2.4)),
+      crowd: crowd(50, "Projected"),
+    }),
+  ];
+  if (ARMSTRONG_TICKETS.has(n)) {
+    venues.push(
+      ven("Louis Armstrong", empty, {
+        ticketed: true,
+        price: price(Math.round(meta.ashe * 0.4), Math.round(meta.ashe * 0.65), Math.round(meta.ashe * 1.3)),
+        crowd: crowd(44, "Projected"),
+      })
+    );
+  }
+  if (GRANDSTAND_TICKETS.has(n)) {
+    venues.push(
+      ven("Grandstand", empty, {
+        ticketed: true,
+        price: price(90, Math.round(meta.ashe * 0.38), Math.round(meta.ashe * 0.85)),
         crowd: crowd(40, "Projected"),
-      }),
-      ven("Stadium 17", [{ player1Id: null, player2Id: null, status: "projected", round }], {
-        price: price(60, Math.round(asheDay * 0.28), Math.round(asheDay * 0.55)),
-        crowd: crowd(35, "Projected"),
-      }),
-      ven("Court 5", [{ player1Id: null, player2Id: null, status: "projected", round, event: "doubles" }], { crowd: crowd(30, "Projected field") }),
-      ven("Grounds", [], { price: price(70, grounds, Math.round(grounds * 1.6)), crowd: crowd(55, "Projected grounds") }),
-    ],
-    { groundsPrice: grounds, groundsList: 70, price: price(Math.round(asheDay * 0.7), asheDay, Math.round(asheDay * 2.2)), projectedRound: round }
+      })
+    );
+  } else if (n <= 14 && meta.dayNight === "night") {
+    venues.push(
+      ven("Grandstand", empty, {
+        ticketed: false,
+        ticketNote: "Covered by Session " + (n - 1) + " Grandstand day ticket",
+        crowd: crowd(28, "Day ticket holds"),
+      })
+    );
+  }
+  if (n <= 14) {
+    venues.push(ven("Stadium 17", empty, { ticketed: false, crowd: crowd(30, "GA / grounds") }));
+  }
+  venues.push(ven("Court 5", empty, { crowd: crowd(24, "Projected field") }));
+  venues.push(
+    ven("Grounds", [], {
+      ticketed: true,
+      price: price(70, meta.grounds, Math.round(meta.grounds * 1.55)),
+      crowd: crowd(meta.dayNight === "night" ? 42 : 55, "Projected grounds"),
+    })
   );
-  sid++;
-  const nightAshe = Math.round(asheDay * (date >= "2026-09-08" ? 1.35 : 0.85));
-  session(
-    "s" + sid + "-night",
-    date,
-    "night",
-    [
-      ven("Arthur Ashe", [{ player1Id: null, player2Id: null, status: "projected", round, order: 1, note: "Night session " + round }], {
-        price: price(Math.round(nightAshe * 0.5), nightAshe, Math.round(nightAshe * 2.8)),
-        crowd: crowd(48, "Projected night"),
-      }),
-      ven("Louis Armstrong", [{ player1Id: null, player2Id: null, status: "projected", round }], {
-        price: price(90, Math.round(nightAshe * 0.55), Math.round(nightAshe * 1.3)),
-        crowd: crowd(42, "Projected night"),
-      }),
-      ven("Grandstand", [{ player1Id: null, player2Id: null, status: "projected", round }], {
-        price: price(70, Math.round(nightAshe * 0.35), Math.round(nightAshe * 0.8)),
-        crowd: crowd(32, "Projected"),
-      }),
-      ven("Stadium 17", [{ player1Id: null, player2Id: null, status: "projected", round }], {
-        price: price(50, Math.round(nightAshe * 0.22), Math.round(nightAshe * 0.5)),
-        crowd: crowd(24, "Projected"),
-      }),
-      ven("Court 8", [{ player1Id: null, player2Id: null, status: "projected", round }], { crowd: crowd(18, "Projected field") }),
-      ven("Grounds", [], { price: price(70, Math.round(grounds * 0.85), Math.round(grounds * 1.3)), crowd: crowd(40, "Projected evening grounds") }),
-    ],
-    {
-      groundsPrice: Math.round(grounds * 0.85),
-      groundsList: 70,
-      price: price(Math.round(nightAshe * 0.5), nightAshe, Math.round(nightAshe * 2.8)),
-      projectedRound: round,
-    }
-  );
-  sid++;
+  session("s" + n + "-" + meta.dayNight, meta.date, meta.dayNight, venues, {
+    sessionNumber: n,
+    groundsPrice: meta.grounds,
+    groundsList: 70,
+    price: price(Math.round(meta.ashe * 0.55), meta.ashe, Math.round(meta.ashe * 2.4)),
+    projectedRound: round,
+  });
 }
 
 const snapshot = {

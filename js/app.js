@@ -40,48 +40,48 @@
     predictions: null,
   };
 
+  function ticketRows() {
+    if (!state._tickets) state._tickets = ENG.ticketCatalog(SNAP, { predictions: state.predictions });
+    return state._tickets;
+  }
+
   function renderTicker() {
     var host = el("ticker");
     if (!host) return;
-    var dates = ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-06", "2026-09-08", "2026-09-13"];
-    var html = "";
-    dates.forEach(function (d) {
-      ["day", "night"].forEach(function (dn) {
-        var view = ENG.groupCalendar(SNAP, d, dn, { predictions: state.predictions });
-        var p = view.pricing;
-        if (!p) return;
-        html +=
-          '<div class="tick"><div class="v">' +
-          d.slice(5) +
+    var catalog = ticketRows();
+    host.innerHTML = catalog
+      .map(function (t) {
+        return (
+          '<div class="tick" data-date="' +
+          t.date +
+          '" data-dn="' +
+          t.dayNight +
+          '" data-venue="' +
+          t.venue +
+          '"><div class="v">S' +
+          t.sessionNumber +
           " " +
-          dn +
-          " · grounds</div><div class='p'>" +
-          money(p.groundsPrice) +
+          t.dayNight +
+          " · " +
+          ENG.venueShort(t.venue) +
+          '</div><div class="p">' +
+          money(t.resale) +
           " <span class='" +
-          dirClass(p.direction) +
+          dirClass(t.direction) +
           "'>" +
-          dirArrow(p.direction) +
-          "</span></div></div>";
-        var ashe = (view.venues || []).find(function (v) {
-          return v.name === "Arthur Ashe";
-        });
-        if (ashe && ashe.pricing) {
-          html +=
-            '<div class="tick"><div class="v">' +
-            d.slice(5) +
-            " " +
-            dn +
-            " · Arthur Ashe</div><div class='p'>" +
-            money(ashe.pricing.stadiumPrice) +
-            " <span class='" +
-            dirClass(ashe.pricing.direction) +
-            "'>" +
-            dirArrow(ashe.pricing.direction) +
-            "</span></div></div>";
-        }
+          dirArrow(t.direction) +
+          "</span></div></div>"
+        );
+      })
+      .join("");
+    host.querySelectorAll(".tick[data-date]").forEach(function (tick) {
+      tick.addEventListener("click", function () {
+        state.date = tick.getAttribute("data-date");
+        state.dayNight = tick.getAttribute("data-dn");
+        state.focusVenue = tick.getAttribute("data-venue");
+        render();
       });
     });
-    host.innerHTML = html;
   }
 
   function renderTabs() {
@@ -310,6 +310,13 @@
   function renderCalendar() {
     var view = ENG.groupCalendar(SNAP, state.date, state.dayNight, { predictions: state.predictions });
     renderMap(view);
+    if (!view.venues || !view.venues.length) {
+      el("venues").innerHTML =
+        "<p class='reason'>No numbered reserved session for this date/day-night. Thursday 10 Sep is <strong>Session 23 evening</strong> (Arthur Ashe). Saturday is Session 26 day; Sunday is Session 27 day.</p>";
+      el("hottest").innerHTML = "";
+      el("session-summary").innerHTML = "";
+      return;
+    }
     var host = el("venues");
     var html = "";
     (view.venues || []).forEach(function (v) {
@@ -317,16 +324,20 @@
       var pr = v.pricing || {};
       var crowd = (v.crowd && v.crowd.pct) || 0;
       html += '<article class="venue' + (hot ? " hot" : "") + '" data-name="' + v.name + '">';
+      var sessN = v.sessionNumber || ENG.officialSessionNumber(state.date, state.dayNight);
+      var sku = ENG.hasTicketSku(v.name, sessN);
       html +=
         "<h3>" +
         (v.sessionLabel ? v.sessionLabel + " · " : "") +
         v.name +
-        (v.ticketed ? " · ticketed" : " · open / field") +
+        (sku ? " · ticketed SKU" : v.ticketed ? " · ticketed" : " · open / field") +
         "</h3>";
       html += "<div class='meta'>" + (v.crowd && v.crowd.label ? v.crowd.label : "Crowd snapshot") + " · " + crowd + "% occupancy</div>";
       html += '<div class="crowd" title="crowd occupancy"><span style="width:' + crowd + '%"></span></div>';
       html += "<div class='price-line'><b>";
-      if (v.name === "Grounds" || v.kind === "field") html += "grounds " + money(pr.groundsPrice || pr.stadiumPrice);
+      if (!sku && v.name !== "Grounds" && v.kind !== "field") {
+        html += v.ticketNote || "no reserved ticket this session";
+      } else if (v.name === "Grounds" || v.kind === "field") html += "grounds " + money(pr.groundsPrice || pr.stadiumPrice);
       else html += money(pr.stadiumPrice);
       html += "</b><span class='signal " + (pr.signal || "hold") + "'>" + (pr.signal || "hold") + " " + dirArrow(pr.direction) + "</span></div>";
       html += "<p class='reason'>" + (pr.reason || "") + "</p>";
@@ -397,10 +408,78 @@
       ". Last-minute signal is buy / sell / hold only — no checkout here. If a billed star is predicted out, direction drops so you can dump resale before the matchup fails.</p>";
   }
 
+  function renderTicketBoard() {
+    var host = el("ticket-board");
+    if (!host) return;
+    var rows = ticketRows();
+    var byS = {};
+    rows.forEach(function (t) {
+      if (!byS[t.sessionNumber]) {
+        byS[t.sessionNumber] = { sessionNumber: t.sessionNumber, date: t.date, dayNight: t.dayNight, cells: {} };
+      }
+      byS[t.sessionNumber].cells[t.venue] = t;
+    });
+    var cols = ["Arthur Ashe", "Louis Armstrong", "Grandstand", "Grounds"];
+    var html =
+      "<table><thead><tr><th>Session</th><th>When</th><th>Arthur Ashe</th><th>Louis Armstrong</th><th>Grandstand</th><th>Grounds</th></tr></thead><tbody>";
+    for (var n = 1; n <= 27; n++) {
+      var row = byS[n];
+      if (!row) continue;
+      var sel = state.date === row.date && state.dayNight === row.dayNight ? " sel" : "";
+      html +=
+        '<tr class="' +
+        sel +
+        '"><td><button type="button" data-date="' +
+        row.date +
+        '" data-dn="' +
+        row.dayNight +
+        '">Session ' +
+        n +
+        "</button></td><td>" +
+        row.date.slice(5) +
+        " " +
+        row.dayNight +
+        "</td>";
+      cols.forEach(function (venue) {
+        var t = row.cells[venue];
+        if (!t) {
+          html += '<td class="na">not sold</td>';
+          return;
+        }
+        html +=
+          "<td><button type='button' data-date='" +
+          t.date +
+          "' data-dn='" +
+          t.dayNight +
+          "' data-venue='" +
+          venue +
+          "'>" +
+          money(t.resale) +
+          " <span class='" +
+          dirClass(t.direction) +
+          "'>" +
+          dirArrow(t.direction) +
+          "</span></button></td>";
+      });
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    host.innerHTML = html;
+    host.querySelectorAll("button[data-date]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.date = btn.getAttribute("data-date");
+        state.dayNight = btn.getAttribute("data-dn");
+        if (btn.getAttribute("data-venue")) state.focusVenue = btn.getAttribute("data-venue");
+        render();
+      });
+    });
+  }
+
   function render() {
     renderTabs();
     renderBracket();
     renderCalendarControls();
+    renderTicketBoard();
     renderCalendar();
   }
 

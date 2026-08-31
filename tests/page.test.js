@@ -33,6 +33,9 @@ describe("shipped page source", () => {
     assert.match(app, /sessionLabel/);
     assert.match(html, /Session 15 at Arthur Ashe/);
     assert.match(html, /Session 16 at Louis Armstrong/);
+    assert.match(html, /ticket-board/);
+    assert.match(html, /Louis Armstrong 16 sessions/);
+    assert.match(html, /Grandstand 7 day sessions/);
     assert.match(css, /sess-bar/);
     assert.match(css, /--court/);
   });

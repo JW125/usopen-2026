@@ -832,12 +832,24 @@
     20: { date: "2026-09-08", dayNight: "night" },
     21: { date: "2026-09-09", dayNight: "day" },
     22: { date: "2026-09-09", dayNight: "night" },
-    23: { date: "2026-09-10", dayNight: "day" },
+    23: { date: "2026-09-10", dayNight: "night" },
     24: { date: "2026-09-11", dayNight: "day" },
     25: { date: "2026-09-11", dayNight: "night" },
     26: { date: "2026-09-12", dayNight: "day" },
     27: { date: "2026-09-13", dayNight: "day" },
   };
+
+  var ARMSTRONG_TICKET_SESSIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17];
+  var GRANDSTAND_TICKET_SESSIONS = [1, 3, 5, 7, 9, 11, 13];
+
+  function hasTicketSku(venue, sessionNumber) {
+    var n = Number(sessionNumber);
+    if (!n || n < 1 || n > 27) return false;
+    if (venue === "Arthur Ashe" || venue === "Grounds") return true;
+    if (venue === "Louis Armstrong") return ARMSTRONG_TICKET_SESSIONS.indexOf(n) !== -1;
+    if (venue === "Grandstand") return GRANDSTAND_TICKET_SESSIONS.indexOf(n) !== -1;
+    return false;
+  }
 
   function officialSessionNumber(date, dayNight) {
     if (!date) return null;
@@ -848,17 +860,86 @@
       var meta = SESSION_WHEN[keys[i]];
       if (meta.date === day && meta.dayNight === (night ? "night" : "day")) return Number(keys[i]);
     }
-    if (night) {
-      for (var j = 0; j < keys.length; j++) {
-        if (SESSION_WHEN[keys[j]].date === day) return Number(keys[j]);
-      }
-    }
     return 0;
   }
 
   function dateAndNightForSession(n) {
     if (!n || n < 1) return { date: "2026-08-26", dayNight: "night" };
     return SESSION_WHEN[n] || { date: "2026-09-13", dayNight: "day" };
+  }
+
+  /**
+   * Every official 2026 reserved-ticket SKU: Ashe 1–27, Armstrong 16 sessions,
+   * Grandstand 7 day sessions, grounds for every numbered session.
+   */
+  function ticketCatalog(snapshot, ctx) {
+    ctx = ctx || {};
+    var predictions = ctx.predictions || predictAllBrackets(snapshot);
+    var engineCtx = {
+      snapshot: snapshot,
+      predictions: predictions,
+      players: snapshot.players,
+      h2h: snapshot.h2h,
+      assumeMatchupsHappen: false,
+    };
+    var pricedByNum = {};
+    (snapshot.sessions || []).forEach(function (s) {
+      var n = s.sessionNumber || officialSessionNumber(s.date, s.dayNight);
+      if (!n) return;
+      var copy = fillProjectedSession(cloneJson(s), snapshot, predictions);
+      pricedByNum[n] = { session: copy, priced: priceSession(copy, engineCtx) };
+    });
+    var out = [];
+    var venues = ["Arthur Ashe", "Louis Armstrong", "Grandstand", "Grounds"];
+    for (var n = 1; n <= 27; n++) {
+      var meta = SESSION_WHEN[n];
+      if (!meta) continue;
+      var pack = pricedByNum[n] || {};
+      var sess = pack.session;
+      var sessionPriced = pack.priced || {};
+      for (var i = 0; i < venues.length; i++) {
+        var venue = venues[i];
+        if (!hasTicketSku(venue, n)) continue;
+        var card = ((sess && sess.venues) || []).find(function (v) {
+          return v.name === venue;
+        });
+        var slice = card
+          ? priceSession(
+              {
+                date: meta.date,
+                dayNight: meta.dayNight,
+                venue: venue,
+                matches: venue === "Grounds" ? collectSessionMatches(sess) : card.matches,
+                price: card.price,
+                groundsPrice: sess && sess.groundsPrice,
+                groundsList: sess && sess.groundsList,
+                venues: [card],
+              },
+              engineCtx
+            )
+          : sessionPriced;
+        var prices = slice.prices || {};
+        var resale =
+          venue === "Grounds"
+            ? slice.groundsPrice || prices.groundsResale || sessionPriced.groundsPrice
+            : slice.stadiumPrice || prices.stadiumResale;
+        out.push({
+          sessionNumber: n,
+          sessionLabel: "Session " + n,
+          date: meta.date,
+          dayNight: meta.dayNight,
+          venue: venue,
+          sku: "Session " + n + " · " + venue,
+          ticketed: true,
+          list: venue === "Grounds" ? prices.groundsList || 65 : prices.stadiumList || 0,
+          resale: Number(resale) || 0,
+          direction: slice.direction || sessionPriced.direction || "flat",
+          signal: slice.signal || sessionPriced.signal || "hold",
+          reason: slice.reason || "",
+        });
+      }
+    }
+    return out;
   }
 
   function venueShort(name) {
@@ -910,7 +991,7 @@
     if (roundLabel === "Round of 16") return { start: 15, end: 18 };
     if (roundLabel === "Quarterfinals") return { start: 19, end: 22 };
     if (roundLabel === "Semifinals") {
-      if (eventId === "ws") return { start: 23, end: 24 };
+      if (eventId === "ws") return { start: 24, end: 25 };
       return { start: 24, end: 25 };
     }
     if (roundLabel === "Final") {
@@ -1085,6 +1166,8 @@
     fillProjectedSession: fillProjectedSession,
     officialSessionNumber: officialSessionNumber,
     annotateBracketSessions: annotateBracketSessions,
+    hasTicketSku: hasTicketSku,
+    ticketCatalog: ticketCatalog,
     venueShort: venueShort,
     sessionDemand: sessionDemand,
     venueWeight: venueWeight,
