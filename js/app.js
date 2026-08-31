@@ -102,18 +102,24 @@
       html += "</div>";
     }
     host.innerHTML = html;
-    host.querySelectorAll(".sku[data-date], .sess-col").forEach(function (node) {
-      node.addEventListener("click", function (ev) {
-        ev.stopPropagation();
-        var t = ev.currentTarget;
-        if (t.getAttribute("data-date")) {
-          state.date = t.getAttribute("data-date");
-          state.dayNight = t.getAttribute("data-dn");
-          if (t.getAttribute("data-venue")) state.focusVenue = t.getAttribute("data-venue");
-          render();
-        }
+    if (host.querySelectorAll) {
+      host.querySelectorAll(".sku[data-date], .sess-col").forEach(function (node) {
+        node.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          var t = ev.currentTarget;
+          if (t.getAttribute("data-date")) {
+            state.date = t.getAttribute("data-date");
+            state.dayNight = t.getAttribute("data-dn");
+            if (t.getAttribute("data-venue")) state.focusVenue = t.getAttribute("data-venue");
+            render();
+          }
+        });
       });
-    });
+    }
+    var current = host.querySelector && host.querySelector(".sess-col.on");
+    if (current && current.scrollIntoView) {
+      current.scrollIntoView({ inline: "center", block: "nearest", behavior: "instant" });
+    }
   }
 
   function renderTabs() {
@@ -508,6 +514,7 @@
   }
 
   function render() {
+    renderTicker();
     renderTabs();
     renderBracket();
     renderCalendarControls();
@@ -531,7 +538,6 @@
     }
     state.predictions = ENG.predictAllBrackets(SNAP);
     el("asof").textContent = "Snapshot " + SNAP.asOf.replace("T", " ").slice(0, 16) + " ET";
-    renderTicker();
     render();
   }
 

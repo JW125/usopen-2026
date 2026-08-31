@@ -35,6 +35,10 @@ describe("shipped page source", () => {
     assert.match(html, /Session 16 at Louis Armstrong/);
     assert.match(html, /ticket-board/);
     assert.match(html, /Sessions 1 through 27 ticket prices, horizontal scroll/);
+    assert.match(html, /viewport-fit=cover/);
+    assert.match(html, /Mobile jump/);
+    assert.match(css, /@media \(max-width: 720px\)/);
+    assert.match(css, /scroll-snap-type: x mandatory/);
     assert.match(html, /Louis Armstrong 16 sessions/);
     assert.match(html, /Grandstand 7 day sessions/);
     assert.match(css, /sess-bar/);

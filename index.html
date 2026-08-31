@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>US Open 2026 — last-minute bracket, calendar, prices</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,6 +34,11 @@
       </div>
       <div id="asof" class="asof">Snapshot</div>
     </header>
+    <nav class="jump" aria-label="Mobile jump">
+      <a href="#ticker">Sessions</a>
+      <a href="#bracket-title">Draw</a>
+      <a href="#cal-title">Courts</a>
+    </nav>
     <div id="ticker" class="ticker" aria-label="Sessions 1 through 27 ticket prices, horizontal scroll"></div>
     <main id="app" class="layout">
       <section class="panel" aria-labelledby="bracket-title">
