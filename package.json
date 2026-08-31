@@ -1,0 +1,10 @@
+{
+  "name": "usopen-last-minute",
+  "version": "2026.8.31",
+  "private": true,
+  "description": "One-shot 2026 US Open bracket predictions, day/night stadium calendar, and ticket direction.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "snapshot": "node data/build-snapshot.js"
+  }
+}

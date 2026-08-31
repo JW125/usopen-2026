@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>US Open 2026 — last-minute bracket, calendar, prices</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Figtree:wght@400;650;800&family=IBM+Plex+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div id="file-banner" class="file-banner" hidden>
+      You opened this as a file:// page. The board still runs from local scripts. If a browser blocks anything,
+      serve it with <code>python3 -m http.server</code> from this folder and use http://localhost:8000
+    </div>
+    <header class="mast">
+      <div>
+        <div class="kicker">Flushing Meadows · Labor Day Monday · last-minute desk</div>
+        <h1>US Open <span>2026</span> one-shot</h1>
+        <p>
+          Brackets filled from current scores, recency-weighted H2H, ranking, and ranking direction. Pick a calendar
+          day and day vs night to see Arthur Ashe, Louis Armstrong, Grandstand, Stadium 17, open field courts, grounds
+          pricing, hottest matches, crowd occupancy, and camera slots.
+        </p>
+      </div>
+      <div id="asof" class="asof">Snapshot</div>
+    </header>
+    <div id="ticker" class="ticker" aria-label="grounds and Arthur Ashe pricing ticker"></div>
+    <main id="app" class="layout">
+      <section class="panel" aria-labelledby="bracket-title">
+        <h2 id="bracket-title">Available brackets</h2>
+        <div id="tabs" class="tabs" role="tablist">
+          <button class="tab" data-tab="ms">Men's Singles</button>
+          <button class="tab" data-tab="ws">Women's Singles</button>
+          <button class="tab" data-tab="md">Men's Doubles</button>
+          <button class="tab" data-tab="wd">Women's Doubles</button>
+          <button class="tab" data-tab="xd">Mixed Doubles</button>
+        </div>
+        <div id="bracket"></div>
+        <p class="legend">
+          Locked cards are completed scores. Everything else is a one-shot: better current ranking and an improving
+          ranking direction lift win probability; the most recent head-to-head outweighs older meetings. The vertical
+          bar on each matchup is the session it is expected to play — Session 15 at Arthur Ashe, Session 16 at Louis Armstrong, and so on. Click a bar to open that calendar session.
+        </p>
+      </section>
+      <section class="panel" aria-labelledby="cal-title">
+        <h2 id="cal-title">Day / night stadium calendar</h2>
+        <div id="dates" class="dates" aria-label="calendar day"></div>
+        <div id="dn" class="dn-row" aria-label="day or night session">
+          <button class="dn" data-dn="day">Day session</button>
+          <button class="dn" data-dn="night">Night session</button>
+        </div>
+        <div id="map" class="map" aria-label="Arthur Ashe Louis Armstrong stadium map"></div>
+        <div id="session-summary"></div>
+        <div id="venues" class="venues"></div>
+        <div id="hottest" class="hottest"></div>
+      </section>
+    </main>
+    <script src="js/snapshot.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
