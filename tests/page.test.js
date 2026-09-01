@@ -21,7 +21,10 @@ describe("shipped page source", () => {
     assert.match(html, /grounds/i);
     assert.match(html, /Day session|day vs night|Night session/i);
     assert.match(html, /Hottest matches/i);
-    assert.match(html, /Camera \/ crowd|camera slots/i);
+    assert.match(html, /learn-bar/);
+    assert.match(html, /Tune from results|learn-bar/);
+    assert.match(app, /play-card/);
+    assert.match(app, /fineTune|learnFromCompleted/);
     assert.match(html, /usopen.org|not embeddable|rights-locked|file:\/\//i);
     assert.match(html, /<script src="js\/snapshot\.js">/);
     assert.match(html, /<script src="js\/engine\.js">/);

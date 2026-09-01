@@ -18,6 +18,28 @@
   };
   var FIELD_WEIGHT = 2.2;
   var DIR_RANK = { down: 0, flat: 1, up: 2 };
+  var DEFAULT_WEIGHTS = { ranking: 1.35, direction: 0.55, h2h: 0.9 };
+  var activeWeights = {
+    ranking: DEFAULT_WEIGHTS.ranking,
+    direction: DEFAULT_WEIGHTS.direction,
+    h2h: DEFAULT_WEIGHTS.h2h,
+  };
+
+  function getWeights() {
+    return {
+      ranking: activeWeights.ranking,
+      direction: activeWeights.direction,
+      h2h: activeWeights.h2h,
+    };
+  }
+
+  function setWeights(w) {
+    w = w || {};
+    if (w.ranking != null) activeWeights.ranking = Number(w.ranking);
+    if (w.direction != null) activeWeights.direction = Number(w.direction);
+    if (w.h2h != null) activeWeights.h2h = Number(w.h2h);
+    return getWeights();
+  }
 
   function clamp(n, lo, hi) {
     return Math.max(lo, Math.min(hi, n));
@@ -128,10 +150,11 @@
     var rankingTerm = Math.log(sA + 1e-12) - Math.log(sB + 1e-12);
     var dirTerm = comboDirection(pa, players) - comboDirection(pb, players);
     var h2hTerm = h2hAdvantage(idA, idB, ctx.h2h || [], ctx.nowMs);
+    var W = ctx.weights || activeWeights;
     var logit =
-      1.35 * rankingTerm +
-      0.55 * dirTerm +
-      0.9 * h2hTerm;
+      (W.ranking != null ? W.ranking : DEFAULT_WEIGHTS.ranking) * rankingTerm +
+      (W.direction != null ? W.direction : DEFAULT_WEIGHTS.direction) * dirTerm +
+      (W.h2h != null ? W.h2h : DEFAULT_WEIGHTS.h2h) * h2hTerm;
     var pA = 1 / (1 + Math.exp(-logit));
     return clamp(pA, 0.02, 0.98);
   }
@@ -1150,6 +1173,137 @@
     });
   }
 
+  function completedOpeners(snapshot) {
+    var dateByPair = {};
+    (snapshot.sessions || []).forEach(function (s) {
+      collectSessionMatches(s).forEach(function (m) {
+        var a = m.player1Id || m.a;
+        var b = m.player2Id || m.b;
+        if (a && b) dateByPair[pairKey(a, b)] = s.date;
+      });
+    });
+    var out = [];
+    var brackets = snapshot.brackets || {};
+    Object.keys(brackets).forEach(function (eid) {
+      openingMatches(brackets[eid]).forEach(function (m) {
+        if (m.status !== "complete" && m.status !== "completed") return;
+        if (!m.winnerId) return;
+        var a = m.player1Id || m.a;
+        var b = m.player2Id || m.b;
+        out.push({
+          eventId: eid,
+          player1Id: a,
+          player2Id: b,
+          winnerId: m.winnerId,
+          score: m.score || "",
+          date: dateByPair[pairKey(a, b)] || String(snapshot.asOf || "").slice(0, 10),
+        });
+      });
+    });
+    return out;
+  }
+
+  /**
+   * Blind-score completed matches (ignore locks) for yesterday/today accuracy.
+   */
+  function learnFromCompleted(snapshot, weights) {
+    var ctx = {
+      players: snapshot.players || {},
+      h2h: snapshot.h2h || [],
+      nowMs: parseDate(snapshot.asOf),
+      weights: weights || getWeights(),
+    };
+    var rows = completedOpeners(snapshot);
+    var hits = 0;
+    var logLoss = 0;
+    var misses = [];
+    var byDay = {};
+    rows.forEach(function (m) {
+      var p1 = winProbability(m.player1Id, m.player2Id, ctx);
+      var predId = p1 >= 0.5 ? m.player1Id : m.player2Id;
+      var pFav = Math.max(p1, 1 - p1);
+      var pActual = m.winnerId === m.player1Id ? p1 : 1 - p1;
+      logLoss += -Math.log(Math.max(0.02, Math.min(0.98, pActual)));
+      var hit = predId === m.winnerId;
+      if (hit) hits += 1;
+      else {
+        misses.push({
+          player1Id: m.player1Id,
+          player2Id: m.player2Id,
+          winnerId: m.winnerId,
+          predictedId: predId,
+          pFav: Math.round(pFav * 1000) / 1000,
+          date: m.date,
+          eventId: m.eventId,
+        });
+      }
+      var day = m.date || "unknown";
+      if (!byDay[day]) byDay[day] = { n: 0, hits: 0 };
+      byDay[day].n += 1;
+      if (hit) byDay[day].hits += 1;
+    });
+    var n = rows.length;
+    var notes = misses.slice(0, 8).map(function (x) {
+      return (
+        "Miss: predicted " +
+        x.predictedId +
+        " (" +
+        Math.round(x.pFav * 100) +
+        "%) but " +
+        x.winnerId +
+        " won on " +
+        x.date
+      );
+    });
+    if (n === 0) notes.push("No completed matches to grade yet.");
+    return {
+      n: n,
+      hits: hits,
+      accuracy: n ? hits / n : 0,
+      logLoss: n ? logLoss / n : 0,
+      misses: misses,
+      byDay: byDay,
+      weights: ctx.weights,
+      notes: notes,
+    };
+  }
+
+  /**
+   * Search nearby ranking / H2H / direction weights on completed results.
+   */
+  function fineTune(snapshot) {
+    var before = learnFromCompleted(snapshot, getWeights());
+    var ranks = [0.9, 1.15, 1.35, 1.6, 1.9];
+    var dirs = [0.2, 0.4, 0.55, 0.85];
+    var h2hs = [0.4, 0.7, 0.9, 1.2];
+    var best = { loss: before.logLoss || 99, acc: before.accuracy, weights: getWeights() };
+    for (var i = 0; i < ranks.length; i++) {
+      for (var j = 0; j < dirs.length; j++) {
+        for (var k = 0; k < h2hs.length; k++) {
+          var w = { ranking: ranks[i], direction: dirs[j], h2h: h2hs[k] };
+          var sc = learnFromCompleted(snapshot, w);
+          if (sc.n === 0) continue;
+          if (sc.logLoss < best.loss - 1e-6 || (Math.abs(sc.logLoss - best.loss) < 1e-6 && sc.accuracy > best.acc)) {
+            best = { loss: sc.logLoss, acc: sc.accuracy, weights: w };
+          }
+        }
+      }
+    }
+    setWeights(best.weights);
+    var after = learnFromCompleted(snapshot, getWeights());
+    return { before: before, after: after, weights: getWeights() };
+  }
+
+  function matchProbability(player1Id, player2Id, snapshot, extra) {
+    extra = extra || {};
+    return winProbability(player1Id, player2Id, {
+      players: snapshot.players,
+      h2h: snapshot.h2h,
+      nowMs: parseDate(snapshot.asOf),
+      weights: extra.weights || getWeights(),
+    });
+  }
+
   var api = {
     REF_MS: REF_MS,
     winProbability: winProbability,
@@ -1175,6 +1329,12 @@
     isOpenField: isOpenField,
     advanceLikelihood: advanceLikelihood,
     DIR_RANK: DIR_RANK,
+    DEFAULT_WEIGHTS: DEFAULT_WEIGHTS,
+    getWeights: getWeights,
+    setWeights: setWeights,
+    learnFromCompleted: learnFromCompleted,
+    fineTune: fineTune,
+    matchProbability: matchProbability,
   };
 
   global.USOpenEngine = api;

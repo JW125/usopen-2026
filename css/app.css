@@ -316,12 +316,60 @@ h2 {
   text-align: left;
 }
 
-.venues { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.65rem; }
+.venues { display: flex; flex-direction: column; gap: 1rem; }
+.stadium-block header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.45rem;
+}
+.stadium-block h3 { margin: 0; font-size: 1.05rem; }
+.stad-price { font-family: var(--font-mono); font-size: 0.95rem; }
+.play-card {
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  padding: 0.7rem 0.8rem 0.75rem;
+  margin-bottom: 0.45rem;
+}
+.play-card.miss { border-color: var(--sell); }
+.play-head { display: flex; justify-content: space-between; align-items: baseline; }
+.headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 8vw, 3.1rem);
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  color: var(--sodium);
+}
+.play-price { font-family: var(--font-mono); font-size: 1.05rem; }
+.play-fav { font-weight: 800; font-size: 1.05rem; margin-top: 0.25rem; }
+.play-dog { color: var(--muted); display: flex; justify-content: space-between; gap: 0.5rem; }
+.play-meta { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--court); margin-top: 0.35rem; }
+.learn-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin: 0 0 0.7rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--stroke);
+}
+#tune-btn {
+  background: var(--ashe);
+  color: var(--line);
+  border: 0;
+  padding: 0.45rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
 .venue {
   border: 1px solid var(--stroke);
   background: var(--panel);
   padding: 0.7rem;
-  min-height: 220px;
+  min-height: 0;
 }
 .venue h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
 .venue.hot { outline: 2px solid var(--sodium); }

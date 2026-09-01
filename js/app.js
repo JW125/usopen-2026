@@ -45,6 +45,86 @@
     return typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
   }
 
+  function playCard(m, priceLabel, venue) {
+    var a = m.player1Id;
+    var b = m.player2Id;
+    var locked = m.status === "complete" || m.status === "completed";
+    var p1 = 0.5;
+    if (a && b) p1 = ENG.matchProbability(a, b, SNAP);
+    if (locked && m.winnerId) {
+      p1 = m.winnerId === a ? 1 : 0;
+    }
+    var modelP = a && b ? ENG.matchProbability(a, b, SNAP) : 0.5;
+    var modelFav = modelP >= 0.5 ? a : b;
+    var modelDog = modelFav === a ? b : a;
+    var modelFavP = Math.max(modelP, 1 - modelP);
+    var strength = modelFavP >= 0.8 ? "strong" : modelFavP >= 0.62 ? "lean" : "toss-up";
+    var miss = locked && modelFav && m.winnerId && modelFav !== m.winnerId;
+    var live = m.status === "live";
+    return (
+      '<article class="play-card' +
+      (miss ? " miss" : "") +
+      (locked ? " done" : "") +
+      '">' +
+      '<div class="play-head"><div class="headline">' +
+      Math.round(modelFavP * 100) +
+      '%</div><div class="play-price">' +
+      priceLabel +
+      "</div></div>" +
+      '<div class="play-fav">' +
+      seedOf(modelFav) +
+      nameOf(modelFav) +
+      (live ? " · LIVE" : "") +
+      "</div>" +
+      '<div class="play-dog">' +
+      seedOf(modelDog) +
+      nameOf(modelDog) +
+      " <span>" +
+      Math.round((1 - modelFavP) * 100) +
+      "%</span></div>" +
+      '<div class="play-meta">' +
+      strength +
+      (miss ? " · model miss" : "") +
+      (m.score ? " · " + m.score : "") +
+      " · " +
+      venue +
+      "</div></article>"
+    );
+  }
+
+  function renderLearnBar() {
+    var host = el("learn-bar");
+    if (!host) return;
+    var L = ENG.learnFromCompleted(SNAP);
+    var y = L.byDay["2026-08-30"] || { n: 0, hits: 0 };
+    var t = L.byDay["2026-08-31"] || { n: 0, hits: 0 };
+    function frac(d) {
+      return d.n ? d.hits + "/" + d.n : "—";
+    }
+    host.innerHTML =
+      "<span>Yesterday " +
+      frac(y) +
+      " · Today " +
+      frac(t) +
+      " · " +
+      (L.n ? Math.round(L.accuracy * 100) + "% graded" : "no grades") +
+      '</span><button type="button" id="tune-btn">Tune from results</button>';
+    var btn = el("tune-btn");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        var tuned = ENG.fineTune(SNAP);
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("usopen-2026-weights", JSON.stringify(tuned.weights));
+          }
+        } catch (e) {}
+        state.predictions = ENG.predictAllBrackets(SNAP);
+        state._tickets = null;
+        render();
+      });
+    }
+  }
+
   function ticketRows() {
     if (!state._tickets) state._tickets = ENG.ticketCatalog(SNAP, { predictions: state.predictions });
     return state._tickets;
@@ -407,6 +487,7 @@
   function renderCalendar() {
     var view = ENG.groupCalendar(SNAP, state.date, state.dayNight, { predictions: state.predictions });
     renderMap(view);
+    renderLearnBar();
     if (!view.venues || !view.venues.length) {
       el("venues").innerHTML =
         "<p class='reason'>No numbered reserved session for this date/day-night. Thursday 10 Sep is <strong>Session 23 evening</strong> (Arthur Ashe). Saturday is Session 26 day; Sunday is Session 27 day.</p>";
@@ -427,49 +508,35 @@
       });
     }
     list.forEach(function (v) {
-      var hot = view.hottest[0] && view.hottest[0].match && view.hottest[0].match.venue === v.name;
       var pr = v.pricing || {};
-      var crowd = (v.crowd && v.crowd.pct) || 0;
-      html += '<article class="venue' + (hot ? " hot" : "") + '" data-name="' + v.name + '">';
       var sessN = v.sessionNumber || ENG.officialSessionNumber(state.date, state.dayNight);
       var sku = ENG.hasTicketSku(v.name, sessN);
+      var priceLabel =
+        v.name === "Grounds" || v.kind === "field"
+          ? money(pr.groundsPrice || pr.stadiumPrice)
+          : sku
+            ? money(pr.stadiumPrice)
+            : "grounds";
+      html += '<section class="stadium-block" data-name="' + v.name + '">';
       html +=
-        "<h3>" +
+        "<header><h3>" +
         (v.sessionLabel ? v.sessionLabel + " · " : "") +
         v.name +
-        (sku ? " · ticketed SKU" : v.ticketed ? " · ticketed" : " · open / field") +
-        "</h3>";
-      html += "<div class='meta'>" + (v.crowd && v.crowd.label ? v.crowd.label : "Crowd snapshot") + " · " + crowd + "% occupancy</div>";
-      html += '<div class="crowd" title="crowd occupancy"><span style="width:' + crowd + '%"></span></div>';
-      html += "<div class='price-line'><b>";
-      if (!sku && v.name !== "Grounds" && v.kind !== "field") {
-        html += v.ticketNote || "no reserved ticket this session";
-      } else if (v.name === "Grounds" || v.kind === "field") html += "grounds " + money(pr.groundsPrice || pr.stadiumPrice);
-      else html += money(pr.stadiumPrice);
-      html += "</b><span class='signal " + (pr.signal || "hold") + "'>" + (pr.signal || "hold") + " " + dirArrow(pr.direction) + "</span></div>";
-      html += "<p class='reason'>" + (pr.reason || "") + "</p>";
-      html += "<ul class='mlist'>";
-      (v.matches || []).forEach(function (m) {
-        html +=
-          "<li>" +
-          seedOf(m.player1Id) +
-          nameOf(m.player1Id) +
-          " vs " +
-          seedOf(m.player2Id) +
-          nameOf(m.player2Id) +
-          (m.score ? " · " + m.score : "") +
-          (m.status === "live" ? " · LIVE" : "") +
-          " <span class='heat'>heat " +
-          Math.round(m.heat || 0) +
-          "</span></li>";
+        "</h3><span class='stad-price'>" +
+        priceLabel +
+        " <span class='" +
+        dirClass(pr.direction) +
+        "'>" +
+        dirArrow(pr.direction) +
+        "</span></span></header>";
+      var matches = v.matches || [];
+      if (!matches.length) {
+        html += "<p class='reason'>Session ticket only.</p>";
+      }
+      matches.forEach(function (m) {
+        html += playCard(m, priceLabel, v.name);
       });
-      if (!v.matches || !v.matches.length) html += "<li>Session access / no reserved match card</li>";
-      html += "</ul>";
-      var cam = v.camera || {};
-      html += "<details class='cam'><summary>Camera / crowd · " + v.name + "</summary>";
-      html += cam.fallback || SNAP.camerasNote;
-      if (cam.page) html += ' <a href="' + cam.page + '" target="_blank" rel="noopener">usopen.org live scores</a>';
-      html += "</details></article>";
+      html += "</section>";
     });
     if (rest.length) {
       html += "<details class='outer-fold'><summary>Outer courts (" + rest.length + ")</summary>";
@@ -627,6 +694,12 @@
         b.hidden = false;
       }
     }
+    try {
+      if (typeof localStorage !== "undefined") {
+        var savedW = localStorage.getItem("usopen-2026-weights");
+        if (savedW) ENG.setWeights(JSON.parse(savedW));
+      }
+    } catch (err) {}
     state.predictions = ENG.predictAllBrackets(SNAP);
     el("asof").textContent = "Snapshot " + SNAP.asOf.replace("T", " ").slice(0, 16) + " ET";
     if (window.matchMedia) {
