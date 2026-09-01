@@ -745,7 +745,7 @@
 
     for (var i = 0; i < sessions.length; i++) {
       var s = sessions[i];
-      var venues = s.venues && s.venues.length ? s.venues : [{ name: s.venue, matches: s.matches, price: s.price, crowd: s.crowd, camera: s.camera, kind: s.kind }];
+      var venues = s.venues && s.venues.length ? s.venues : [{ name: s.venue, matches: s.matches, price: s.price, kind: s.kind }];
       var sessionMatches = collectSessionMatches(s);
       var sessionPriced = priceSession(s, engineCtx);
       for (var v = 0; v < venues.length; v++) {
@@ -804,12 +804,6 @@
           kind: ven.kind || (isOpenField(ven.name) ? "field" : ven.name === "Grounds" ? "grounds" : "stadium"),
           matches: labeled,
           price: ven.price || null,
-          crowd: ven.crowd || { pct: 0, label: "No reading", source: "snapshot" },
-          camera: ven.camera || {
-            type: "fallback",
-            url: "",
-            fallback: "Live court camera is not embeddable from this page. Crowd meter uses the public session snapshot.",
-          },
           pricing: priced,
         });
       }

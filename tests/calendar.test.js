@@ -22,6 +22,7 @@ describe("shipped groupCalendar", () => {
     const grounds = view.venues.find((v) => v.name === "Grounds");
     assert.ok(grounds);
     assert.ok(grounds.pricing.groundsPrice > 0);
+    assert.ok(view.venues.every((v) => v.camera == null && v.crowd == null));
   });
 
   it("orders hottest matches deterministically for the same inputs", () => {

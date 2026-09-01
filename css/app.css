@@ -205,8 +205,8 @@ h2 {
   font-size: 0.85rem;
 }
 .venue-chip.on { background: var(--court); color: #04211f; border-color: var(--court); }
-.outer-fold, details.cam { margin-top: 0.65rem; color: var(--muted); font-size: 0.82rem; }
-.outer-fold summary, details.cam summary { cursor: pointer; color: var(--court); font-weight: 700; }
+.outer-fold { margin-top: 0.65rem; color: var(--muted); font-size: 0.82rem; }
+.outer-fold summary { cursor: pointer; color: var(--court); font-weight: 700; }
 
 .bracket-scroll {
   overflow: auto;
@@ -387,17 +387,6 @@ h2 {
 .signal.sell { background: var(--sell); color: #2a0704; }
 .signal.hold { background: #2a3348; color: var(--line); }
 
-.crowd {
-  height: 8px;
-  background: #132038;
-  margin: 0.35rem 0 0.55rem;
-  position: relative;
-}
-.crowd > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--court), var(--sodium));
-}
 .mlist { list-style: none; padding: 0; margin: 0; }
 .mlist li {
   padding: 0.32rem 0;
@@ -405,27 +394,6 @@ h2 {
   font-size: 0.88rem;
 }
 .heat { color: var(--sodium); font-family: var(--font-mono); font-size: 0.72rem; }
-
-.cam {
-  margin-top: 0.5rem;
-  font-size: 0.78rem;
-  color: var(--line);
-}
-details.cam {
-  min-height: 0;
-  background: none;
-  border: 0;
-  padding: 0;
-}
-details.cam[open] {
-  padding: 0.55rem;
-  border: 1px dashed rgba(31,168,160,0.45);
-  background:
-    repeating-linear-gradient(45deg, rgba(31,168,160,0.08) 0 8px, transparent 8px 16px),
-    #091320;
-}
-.cam strong { display: block; color: var(--court); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.25rem; }
-.cam iframe { width: 100%; height: 110px; border: 0; background: #000; }
 
 .hottest { margin-top: 1rem; }
 .hottest ol { margin: 0; padding-left: 1.2rem; }

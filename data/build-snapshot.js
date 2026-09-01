@@ -749,19 +749,6 @@ const h2h = [
   { winnerId: "kenin", loserId: "pegula", date: "2020-09-10" },
 ];
 
-const CAM_FALLBACK =
-  "Official US Open court cameras are geo- and rights-locked in this browser. Crowd occupancy is from the public session snapshot. Watch the match on ESPN, the US Open app, or usopen.org.";
-
-function camera(venue, page) {
-  return {
-    type: "fallback-slot",
-    venue,
-    page: page || "https://www.usopen.org/en_US/scores/index.html",
-    embed: "",
-    fallback: CAM_FALLBACK,
-  };
-}
-
 function crowd(pct, label) {
   return { pct, label, source: "snapshot", unit: "occupancy" };
 }
@@ -802,7 +789,6 @@ function ven(name, matches, opts) {
     matches,
     price: opts.price || null,
     crowd: opts.crowd || crowd(40, "Filling"),
-    camera: camera(name),
     ticketNote: opts.ticketNote || "",
   };
 }
@@ -1079,7 +1065,7 @@ const snapshot = {
   tournament: "2026 US Open",
   venueCampus: "USTA Billie Jean King National Tennis Center",
   sourceNotes:
-    "Draws and Day 1 scores from public US Open / AP / Sky Sports reports on 30–31 Aug 2026. Session prices are resale get-in snapshots (TicketIQ / SeatData / published face). Cameras degrade honestly when embeds are blocked.",
+    "Draws and Day 1 scores from public US Open / AP / Sky Sports reports on 30–31 Aug 2026. Session prices are resale get-in snapshots (TicketIQ / SeatData / published face).",
   players,
   h2h,
   brackets: {
@@ -1090,7 +1076,6 @@ const snapshot = {
     xd: { id: "xd", name: "Mixed Doubles", size: 16, bestOf: 3, opening: mixedOpening, later: mixedLater },
   },
   sessions,
-  camerasNote: CAM_FALLBACK,
 };
 
 const jsonPath = path.join(__dirname, "snapshot.json");
