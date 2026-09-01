@@ -39,6 +39,9 @@ describe("shipped page source", () => {
     assert.match(html, /Mobile jump/);
     assert.match(css, /@media \(max-width: 720px\)/);
     assert.match(css, /scroll-snap-type: x mandatory/);
+    assert.match(css, /courts-panel/);
+    assert.match(app, /round-switch/);
+    assert.match(app, /venue-chip/);
     assert.match(html, /Louis Armstrong 16 sessions/);
     assert.match(html, /Grandstand 7 day sessions/);
     assert.match(css, /sess-bar/);

@@ -41,7 +41,7 @@
     </nav>
     <div id="ticker" class="ticker" aria-label="Sessions 1 through 27 ticket prices, horizontal scroll"></div>
     <main id="app" class="layout">
-      <section class="panel" aria-labelledby="bracket-title">
+      <section class="panel draw-panel" aria-labelledby="bracket-title">
         <h2 id="bracket-title">Available brackets</h2>
         <div id="tabs" class="tabs" role="tablist">
           <button class="tab" data-tab="ms">Men's Singles</button>
@@ -57,12 +57,12 @@
           bar on each matchup is the session it is expected to play — Session 15 at Arthur Ashe, Session 16 at Louis Armstrong, and so on. Click a bar to open that calendar session.
         </p>
       </section>
-      <section class="panel" aria-labelledby="cal-title">
+      <section class="panel courts-panel" aria-labelledby="cal-title">
         <h2 id="cal-title">Day / night stadium calendar</h2>
         <div id="dates" class="dates" aria-label="calendar day"></div>
         <div id="dn" class="dn-row" aria-label="day or night session">
-          <button class="dn" data-dn="day">Day session</button>
-          <button class="dn" data-dn="night">Night session</button>
+          <button class="dn" data-dn="day">Day</button>
+          <button class="dn" data-dn="night">Night</button>
         </div>
         <div id="map" class="map" aria-label="Arthur Ashe Louis Armstrong stadium map"></div>
         <div id="session-summary"></div>

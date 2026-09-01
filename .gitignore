@@ -4,3 +4,4 @@ ui-launch.log
 *.log
 .wrangler/
 .cache/
+mobile-audit/

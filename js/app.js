@@ -38,7 +38,12 @@
     dayNight: "day",
     focusVenue: "Arthur Ashe",
     predictions: null,
+    roundIdx: 0,
   };
+
+  function isNarrow() {
+    return typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+  }
 
   function ticketRows() {
     if (!state._tickets) state._tickets = ENG.ticketCatalog(SNAP, { predictions: state.predictions });
@@ -147,6 +152,7 @@
     host.querySelectorAll(".tab").forEach(function (btn) {
       btn.addEventListener("click", function () {
         state.tab = btn.getAttribute("data-tab");
+        state.roundIdx = 0;
         render();
       });
     });
@@ -167,8 +173,34 @@
       host.innerHTML = "<p>No bracket.</p>";
       return;
     }
-    var html = '<div class="bracket-scroll"><div class="rounds">';
-    pred.rounds.forEach(function (round) {
+    var html = "";
+    var narrow = isNarrow();
+    var rounds = pred.rounds;
+    if (narrow) {
+      if (state.roundIdx < 0 || state.roundIdx >= rounds.length) state.roundIdx = 0;
+      html += '<div class="round-switch">';
+      rounds.forEach(function (round, i) {
+        var lab = (round[0] && round[0].roundLabel) || "Round";
+        html +=
+          '<button type="button" class="chip" data-ri="' +
+          i +
+          '" aria-pressed="' +
+          (state.roundIdx === i) +
+          '">' +
+          lab.replace("Round of ", "R") +
+          "</button>";
+      });
+      html += "</div>";
+      var one = pred.rounds[state.roundIdx].slice();
+      one = one.filter(function (m) {
+        var s = m.session || {};
+        return s.date === state.date && (s.dayNight || "day") === state.dayNight;
+      });
+      if (!one.length) one = pred.rounds[state.roundIdx];
+      rounds = [one];
+    }
+    html += '<div class="bracket-scroll"><div class="rounds">';
+    rounds.forEach(function (round) {
       html += "<div class='round'><h3>" + (round[0] && round[0].roundLabel ? round[0].roundLabel : "Round") + "</h3>";
       round.forEach(function (m) {
         var w = m.winnerId;
@@ -233,24 +265,33 @@
       nameOf(pred.championId) +
       "</strong></div>";
     host.innerHTML = html;
-    host.querySelectorAll(".match[data-date]").forEach(function (card) {
-      function go() {
-        var d = card.getAttribute("data-date");
-        var dn = card.getAttribute("data-dn");
-        var ven = card.getAttribute("data-venue");
-        if (d) state.date = d;
-        if (dn) state.dayNight = dn;
-        if (ven) state.focusVenue = ven;
-        render();
-      }
-      card.addEventListener("click", go);
-      card.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          go();
-        }
+    if (host.querySelectorAll) {
+      host.querySelectorAll(".round-switch .chip").forEach(function (btn) {
+        btn.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          state.roundIdx = Number(btn.getAttribute("data-ri")) || 0;
+          render();
+        });
       });
-    });
+      host.querySelectorAll(".match[data-date]").forEach(function (card) {
+        function go() {
+          var d = card.getAttribute("data-date");
+          var dn = card.getAttribute("data-dn");
+          var ven = card.getAttribute("data-venue");
+          if (d) state.date = d;
+          if (dn) state.dayNight = dn;
+          if (ven) state.focusVenue = ven;
+          render();
+        }
+        card.addEventListener("click", go);
+        card.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            go();
+          }
+        });
+      });
+    }
   }
 
   function uniqueDates() {
@@ -288,12 +329,12 @@
       });
     });
     el("dn").innerHTML =
-      '<button class="dn" data-dn="day" aria-pressed="' +
+      '<button type="button" class="dn" data-dn="day" aria-pressed="' +
       (state.dayNight === "day") +
-      '">Day session</button>' +
-      '<button class="dn" data-dn="night" aria-pressed="' +
+      '">Day</button>' +
+      '<button type="button" class="dn" data-dn="night" aria-pressed="' +
       (state.dayNight === "night") +
-      '">Night session</button>';
+      '">Night</button>';
     el("dn").querySelectorAll(".dn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         state.dayNight = btn.getAttribute("data-dn");
@@ -307,42 +348,60 @@
     var names = (view.venues || []).map(function (v) {
       return v.name;
     });
-    function blk(name, cls) {
-      var on = names.indexOf(name) >= 0;
-      return (
-        '<div class="bowl-block ' +
-        (cls || "") +
-        (state.focusVenue === name ? " sel" : "") +
-        '" data-venue="' +
-        name +
-        '">' +
-        (on ? name : name) +
-        "</div>"
-      );
+    if (isNarrow()) {
+      host.innerHTML = names
+        .map(function (name) {
+          var on = state.focusVenue === name;
+          return (
+            '<button type="button" class="venue-chip' +
+            (on ? " on" : "") +
+            '" data-venue="' +
+            name +
+            '">' +
+            name +
+            "</button>"
+          );
+        })
+        .join("");
+    } else {
+      function blk(name, cls) {
+        return (
+          '<div class="bowl-block ' +
+          (cls || "") +
+          (state.focusVenue === name ? " sel" : "") +
+          '" data-venue="' +
+          name +
+          '">' +
+          name +
+          "</div>"
+        );
+      }
+      host.innerHTML =
+        blk("Arthur Ashe") +
+        '<div class="field-col">' +
+        blk("Louis Armstrong", "small") +
+        blk("Grandstand", "small") +
+        blk("Stadium 17", "small") +
+        "</div><div class='field-col'>" +
+        (view.venues || [])
+          .filter(function (v) {
+            return ENG.isOpenField(v.name);
+          })
+          .slice(0, 6)
+          .map(function (v) {
+            return "<div data-venue='" + v.name + "'>" + v.name + "</div>";
+          })
+          .join("") +
+        "</div>";
     }
-    host.innerHTML =
-      blk("Arthur Ashe") +
-      '<div class="field-col">' +
-      blk("Louis Armstrong", "small") +
-      blk("Grandstand", "small") +
-      blk("Stadium 17", "small") +
-      "</div><div class='field-col'>" +
-      (view.venues || [])
-        .filter(function (v) {
-          return ENG.isOpenField(v.name);
-        })
-        .slice(0, 6)
-        .map(function (v) {
-          return "<div data-venue='" + v.name + "'>" + v.name + "</div>";
-        })
-        .join("") +
-      "</div>";
-    host.querySelectorAll("[data-venue]").forEach(function (n) {
-      n.addEventListener("click", function () {
-        state.focusVenue = n.getAttribute("data-venue");
-        render();
+    if (host.querySelectorAll) {
+      host.querySelectorAll("[data-venue]").forEach(function (n) {
+        n.addEventListener("click", function () {
+          state.focusVenue = n.getAttribute("data-venue");
+          render();
+        });
       });
-    });
+    }
   }
 
   function renderCalendar() {
@@ -357,7 +416,17 @@
     }
     var host = el("venues");
     var html = "";
-    (view.venues || []).forEach(function (v) {
+    var list = view.venues || [];
+    var rest = [];
+    if (isNarrow()) {
+      rest = list.filter(function (v) {
+        return ENG.isOpenField(v.name);
+      });
+      list = list.filter(function (v) {
+        return !ENG.isOpenField(v.name);
+      });
+    }
+    list.forEach(function (v) {
       var hot = view.hottest[0] && view.hottest[0].match && view.hottest[0].match.venue === v.name;
       var pr = v.pricing || {};
       var crowd = (v.crowd && v.crowd.pct) || 0;
@@ -397,11 +466,33 @@
       if (!v.matches || !v.matches.length) html += "<li>Session access / no reserved match card</li>";
       html += "</ul>";
       var cam = v.camera || {};
-      html += "<div class='cam'><strong>Camera / crowd slot · " + v.name + "</strong>";
+      html += "<details class='cam'><summary>Camera / crowd · " + v.name + "</summary>";
       html += cam.fallback || SNAP.camerasNote;
       if (cam.page) html += ' <a href="' + cam.page + '" target="_blank" rel="noopener">usopen.org live scores</a>';
-      html += "</div></article>";
+      html += "</details></article>";
     });
+    if (rest.length) {
+      html += "<details class='outer-fold'><summary>Outer courts (" + rest.length + ")</summary>";
+      rest.forEach(function (v) {
+        html +=
+          '<p class="mlist"><strong>' +
+          v.name +
+          "</strong> · grounds " +
+          money(v.pricing && v.pricing.groundsPrice) +
+          "</p><ul class='mlist'>";
+        (v.matches || []).forEach(function (m) {
+          html +=
+            "<li>" +
+            nameOf(m.player1Id) +
+            " vs " +
+            nameOf(m.player2Id) +
+            (m.status === "live" ? " · LIVE" : "") +
+            "</li>";
+        });
+        html += "</ul>";
+      });
+      html += "</details>";
+    }
     host.innerHTML = html;
 
     var hotHost = el("hottest");
@@ -538,6 +629,11 @@
     }
     state.predictions = ENG.predictAllBrackets(SNAP);
     el("asof").textContent = "Snapshot " + SNAP.asOf.replace("T", " ").slice(0, 16) + " ET";
+    if (window.matchMedia) {
+      var mq = window.matchMedia("(max-width: 720px)");
+      if (mq.addEventListener) mq.addEventListener("change", function () { render(); });
+      else if (mq.addListener) mq.addListener(function () { render(); });
+    }
     render();
   }
 
