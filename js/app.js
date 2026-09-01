@@ -72,11 +72,20 @@
     var strength = modelFavP >= 0.8 ? "strong" : modelFavP >= 0.62 ? "lean" : "toss-up";
     var miss = locked && modelFav && m.winnerId && modelFav !== m.winnerId;
     var live = m.status === "live";
+    var happen = m.happenProb;
+    if (happen == null && ENG.pairHappenProb) {
+      happen = ENG.pairHappenProb(a, b, state.predictions, m.status);
+    }
+    if (happen == null && (locked || live || m.status === "scheduled")) happen = 1;
+    var happenPct = happen == null ? "" : Math.round(happen * 100) + "% play here";
     return (
       '<article class="play-card' +
       (miss ? " miss" : "") +
       (locked ? " done" : "") +
       '">' +
+      (happenPct
+        ? '<div class="play-happen">' + happenPct + "</div>"
+        : "") +
       playRow(a, p1, live) +
       playRow(b, 1 - p1, false) +
       '<div class="play-meta">' +

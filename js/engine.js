@@ -297,13 +297,14 @@
       }
     }
 
-    return {
+    var predicted = {
       id: bracket.id,
       name: bracket.name,
       size: drawSize,
       rounds: rounds,
       championId: current.length ? current[0].winnerId : null,
     };
+    return attachHappenProbs(predicted, ctx);
   }
 
   function roundLabels(drawSize, nRounds) {
@@ -318,6 +319,96 @@
       size = size / 2;
     }
     return names;
+  }
+
+  function idsOfDist(dist) {
+    var out = [];
+    for (var k in dist) {
+      if (Object.prototype.hasOwnProperty.call(dist, k) && dist[k] > 0) out.push(k);
+    }
+    return out;
+  }
+
+  /**
+   * P(the two named players actually meet in this match).
+   * Opening billed matches are 1. Later rounds multiply path-win probabilities
+   * from independent halves, using locked results when a prior match is done.
+   */
+  function attachHappenProbs(predicted, ctx) {
+    ctx = ctx || {};
+    var rounds = predicted && predicted.rounds;
+    if (!rounds || !rounds.length) return predicted;
+    var advance = [];
+    for (var r = 0; r < rounds.length; r++) {
+      advance[r] = [];
+      for (var s = 0; s < rounds[r].length; s++) {
+        var m = rounds[r][s];
+        var dist = {};
+        var a = m.player1Id;
+        var b = m.player2Id;
+        if (r === 0) {
+          m.happenProb = a && b ? 1 : 1;
+          if (m.locked && m.winnerId) {
+            dist[m.winnerId] = 1;
+          } else if (a && b) {
+            var pOpen = winProbability(a, b, ctx);
+            dist[a] = pOpen;
+            dist[b] = 1 - pOpen;
+          } else if (a) dist[a] = 1;
+          else if (b) dist[b] = 1;
+        } else {
+          var left = advance[r - 1][s * 2] || {};
+          var right = advance[r - 1][s * 2 + 1] || {};
+          var pA = (a && (left[a] || 0) + (right[a] || 0)) || 0;
+          var pB = (b && (left[b] || 0) + (right[b] || 0)) || 0;
+          m.happenProb = clamp(pA * pB, 0, 1);
+          if (m.locked && m.winnerId) {
+            dist[m.winnerId] = 1;
+            m.happenProb = a && b ? 1 : m.happenProb;
+          } else {
+            var leftIds = idsOfDist(left);
+            var rightIds = idsOfDist(right);
+            for (var i = 0; i < leftIds.length; i++) {
+              for (var j = 0; j < rightIds.length; j++) {
+                var L = leftIds[i];
+                var R = rightIds[j];
+                if (L === R) continue;
+                var joint = left[L] * right[R];
+                if (joint <= 0) continue;
+                var pL = winProbability(L, R, ctx);
+                dist[L] = (dist[L] || 0) + joint * pL;
+                dist[R] = (dist[R] || 0) + joint * (1 - pL);
+              }
+            }
+          }
+        }
+        advance[r][s] = dist;
+      }
+    }
+    return predicted;
+  }
+
+  function pairHappenProb(idA, idB, predictions, status) {
+    if (status === "complete" || status === "completed" || status === "live") return 1;
+    if (!idA || !idB) return 1;
+    var keys = Object.keys(predictions || {});
+    for (var e = 0; e < keys.length; e++) {
+      var pred = predictions[keys[e]];
+      if (!pred || !pred.rounds) continue;
+      for (var r = 0; r < pred.rounds.length; r++) {
+        var round = pred.rounds[r] || [];
+        for (var i = 0; i < round.length; i++) {
+          var cell = round[i];
+          var c1 = cell.player1Id;
+          var c2 = cell.player2Id;
+          if ((c1 === idA && c2 === idB) || (c1 === idB && c2 === idA)) {
+            if (cell.happenProb != null) return cell.happenProb;
+            if (r === 0) return 1;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   function predictAllBrackets(snapshot) {
@@ -704,6 +795,7 @@
       m.b = cell.player2Id;
       m.status = cell.locked ? "complete" : "projected";
       m.session = cell.session;
+      m.happenProb = cell.happenProb;
       return m;
     }
     (session.matches || []).forEach(function (m) {
@@ -793,6 +885,10 @@
             },
           };
           row.heat = hottestScore(row, engineCtx);
+          var hp = m.happenProb;
+          if (hp == null) hp = pairHappenProb(row.player1Id, row.player2Id, predictions, row.status);
+          if (hp == null && (row.status === "scheduled" || row.status === "complete" || row.status === "live")) hp = 1;
+          row.happenProb = hp;
           allMatches.push(row);
           return row;
         });
@@ -1329,6 +1425,8 @@
     learnFromCompleted: learnFromCompleted,
     fineTune: fineTune,
     matchProbability: matchProbability,
+    attachHappenProbs: attachHappenProbs,
+    pairHappenProb: pairHappenProb,
   };
 
   global.USOpenEngine = api;

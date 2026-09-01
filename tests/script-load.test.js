@@ -67,6 +67,7 @@ describe("browser script load without Node module/require", () => {
     assert.match(String(venues.innerHTML), /grounds/i);
     assert.match(String(venues.innerHTML), /play-card/);
     assert.match(String(venues.innerHTML), /play-row/);
+    assert.match(String(venues.innerHTML), /play here/);
     assert.match(String(venues.innerHTML), /%/);
     assert.doesNotMatch(String(venues.innerHTML), /play-price|play-fav|headline/);
     assert.doesNotMatch(String(venues.innerHTML), /occupancy|camera/i);

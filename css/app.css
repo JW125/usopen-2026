@@ -332,6 +332,14 @@ h2 {
   padding: 0.7rem 0.8rem 0.75rem;
   margin-bottom: 0.45rem;
 }
+.play-happen {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--sodium);
+  margin-bottom: 0.35rem;
+}
 .play-card.miss { border-color: var(--sell); }
 .play-row {
   display: flex;
