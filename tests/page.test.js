@@ -24,6 +24,8 @@ describe("shipped page source", () => {
     assert.match(html, /learn-bar/);
     assert.match(html, /Tune from results|learn-bar/);
     assert.match(app, /play-card/);
+    assert.match(app, /play-row/);
+    assert.doesNotMatch(app, /play-fav|play-price|headline/);
     assert.match(app, /fineTune|learnFromCompleted/);
     assert.doesNotMatch(html, /camera/i);
     assert.doesNotMatch(app, /camera/i);

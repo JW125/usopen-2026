@@ -45,7 +45,19 @@
     return typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
   }
 
-  function playCard(m, priceLabel, venue) {
+  function playRow(id, pct, live) {
+    return (
+      '<div class="play-row"><span class="play-name">' +
+      seedOf(id) +
+      nameOf(id) +
+      (live ? " · LIVE" : "") +
+      '</span><span class="play-pct">' +
+      Math.round((pct || 0) * 100) +
+      "%</span></div>"
+    );
+  }
+
+  function playCard(m, venue) {
     var a = m.player1Id;
     var b = m.player2Id;
     var locked = m.status === "complete" || m.status === "completed";
@@ -56,7 +68,6 @@
     }
     var modelP = a && b ? ENG.matchProbability(a, b, SNAP) : 0.5;
     var modelFav = modelP >= 0.5 ? a : b;
-    var modelDog = modelFav === a ? b : a;
     var modelFavP = Math.max(modelP, 1 - modelP);
     var strength = modelFavP >= 0.8 ? "strong" : modelFavP >= 0.62 ? "lean" : "toss-up";
     var miss = locked && modelFav && m.winnerId && modelFav !== m.winnerId;
@@ -66,22 +77,8 @@
       (miss ? " miss" : "") +
       (locked ? " done" : "") +
       '">' +
-      '<div class="play-head"><div class="headline">' +
-      Math.round(modelFavP * 100) +
-      '%</div><div class="play-price">' +
-      priceLabel +
-      "</div></div>" +
-      '<div class="play-fav">' +
-      seedOf(modelFav) +
-      nameOf(modelFav) +
-      (live ? " · LIVE" : "") +
-      "</div>" +
-      '<div class="play-dog">' +
-      seedOf(modelDog) +
-      nameOf(modelDog) +
-      " <span>" +
-      Math.round((1 - modelFavP) * 100) +
-      "%</span></div>" +
+      playRow(a, p1, live) +
+      playRow(b, 1 - p1, false) +
       '<div class="play-meta">' +
       strength +
       (miss ? " · model miss" : "") +
@@ -591,7 +588,7 @@
         html += "<p class='reason'>Session ticket only.</p>";
       }
       matches.forEach(function (m) {
-        html += playCard(m, priceLabel, v.name);
+        html += playCard(m, v.name);
       });
       html += "</section>";
     });
