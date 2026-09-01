@@ -36,7 +36,7 @@
     tab: "ms",
     date: "2026-08-31",
     dayNight: "day",
-    focusVenue: "Arthur Ashe",
+    focusVenue: "",
     predictions: null,
     roundIdx: 0,
   };
@@ -274,9 +274,11 @@
       var one = pred.rounds[state.roundIdx].slice();
       one = one.filter(function (m) {
         var s = m.session || {};
-        return s.date === state.date && (s.dayNight || "day") === state.dayNight;
+        if (s.date !== state.date || (s.dayNight || "day") !== state.dayNight) return false;
+        if (state.focusVenue && s.venue !== state.focusVenue) return false;
+        return true;
       });
-      if (!one.length) one = pred.rounds[state.roundIdx];
+      if (!one.length && !state.focusVenue) one = pred.rounds[state.roundIdx];
       rounds = [one];
     }
     html += '<div class="bracket-scroll"><div class="rounds">';
@@ -423,26 +425,68 @@
     });
   }
 
+  function venueChip(name, label) {
+    var on = name ? state.focusVenue === name : !state.focusVenue;
+    return (
+      '<button type="button" class="venue-chip' +
+      (on ? " on" : "") +
+      '" data-venue="' +
+      name +
+      '">' +
+      (label || name) +
+      "</button>"
+    );
+  }
+
+  function setFocusVenue(name) {
+    if (!name || name === state.focusVenue) state.focusVenue = "";
+    else state.focusVenue = name;
+  }
+
+  function syncVenueSelection() {
+    var host = el("map");
+    if (!host || !host.querySelectorAll) return;
+    host.querySelectorAll("[data-venue]").forEach(function (n) {
+      var name = n.getAttribute("data-venue") || "";
+      var on = name ? state.focusVenue === name : !state.focusVenue;
+      if (n.classList.contains("venue-chip")) {
+        if (on) n.classList.add("on");
+        else n.classList.remove("on");
+      }
+      if (n.classList.contains("bowl-block")) {
+        if (on) n.classList.add("sel");
+        else n.classList.remove("sel");
+      }
+    });
+  }
+
+  var venueTapAt = 0;
+  function applyVenueFilter(name) {
+    var now = Date.now();
+    if (now - venueTapAt < 120) return;
+    venueTapAt = now;
+    setFocusVenue(name);
+    syncVenueSelection();
+    renderCalendar({ skipMap: true });
+    renderBracket();
+  }
+
   function renderMap(view) {
     var host = el("map");
     var names = (view.venues || []).map(function (v) {
       return v.name;
     });
-    if (isNarrow()) {
-      host.innerHTML = names
+    var chips =
+      '<div class="venue-row">' +
+      venueChip("", "All courts") +
+      names
         .map(function (name) {
-          var on = state.focusVenue === name;
-          return (
-            '<button type="button" class="venue-chip' +
-            (on ? " on" : "") +
-            '" data-venue="' +
-            name +
-            '">' +
-            name +
-            "</button>"
-          );
+          return venueChip(name);
         })
-        .join("");
+        .join("") +
+      "</div>";
+    if (isNarrow()) {
+      host.innerHTML = chips;
     } else {
       function blk(name, cls) {
         return (
@@ -457,6 +501,7 @@
         );
       }
       host.innerHTML =
+        chips +
         blk("Arthur Ashe") +
         '<div class="field-col">' +
         blk("Louis Armstrong", "small") +
@@ -476,17 +521,19 @@
     }
     if (host.querySelectorAll) {
       host.querySelectorAll("[data-venue]").forEach(function (n) {
-        n.addEventListener("click", function () {
-          state.focusVenue = n.getAttribute("data-venue");
-          render();
+        n.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          applyVenueFilter(n.getAttribute("data-venue") || "");
         });
       });
     }
   }
 
-  function renderCalendar() {
+  function renderCalendar(opts) {
+    opts = opts || {};
     var view = ENG.groupCalendar(SNAP, state.date, state.dayNight, { predictions: state.predictions });
-    renderMap(view);
+    if (!opts.skipMap) renderMap(view);
     renderLearnBar();
     if (!view.venues || !view.venues.length) {
       el("venues").innerHTML =
@@ -499,13 +546,23 @@
     var html = "";
     var list = view.venues || [];
     var rest = [];
-    if (isNarrow()) {
+    if (state.focusVenue) {
+      list = list.filter(function (v) {
+        return v.name === state.focusVenue;
+      });
+    } else if (isNarrow()) {
       rest = list.filter(function (v) {
         return ENG.isOpenField(v.name);
       });
       list = list.filter(function (v) {
         return !ENG.isOpenField(v.name);
       });
+    }
+    if (state.focusVenue && !list.length) {
+      html =
+        "<p class='reason'>No matches at " +
+        state.focusVenue +
+        " this session. Pick All courts or another stadium.</p>";
     }
     list.forEach(function (v) {
       var pr = v.pricing || {};
@@ -563,9 +620,12 @@
     host.innerHTML = html;
 
     var hotHost = el("hottest");
+    var hot = (view.hottest || []).filter(function (h) {
+      return !state.focusVenue || (h.match && h.match.venue === state.focusVenue);
+    });
     hotHost.innerHTML =
       "<h2>Hottest matches</h2><ol>" +
-      view.hottest
+      hot
         .slice(0, 8)
         .map(function (h) {
           var m = h.match;

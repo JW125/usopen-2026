@@ -408,6 +408,12 @@ h2 {
   gap: 0.35rem;
   margin-bottom: 0.9rem;
 }
+.venue-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
 .bowl-block {
   background: radial-gradient(ellipse at 50% 40%, #2457b8, #10244a 62%, #0a1730);
   min-height: 86px;

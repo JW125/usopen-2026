@@ -68,6 +68,16 @@ describe("browser script load without Node module/require", () => {
     assert.match(String(venues.innerHTML), /play-card/);
     assert.match(String(venues.innerHTML), /%/);
     assert.doesNotMatch(String(venues.innerHTML), /occupancy|camera/i);
+    ctx.window.USOpenApp.state.focusVenue = "Arthur Ashe";
+    ctx.window.USOpenApp.render();
+    const asheOnly = String(ctx.document.getElementById("venues").innerHTML);
+    assert.match(asheOnly, /Arthur Ashe/);
+    assert.match(asheOnly, /play-card/);
+    assert.doesNotMatch(asheOnly, /Louis Armstrong/);
+    assert.doesNotMatch(asheOnly, /Grandstand/);
+    ctx.window.USOpenApp.state.focusVenue = "";
+    ctx.window.USOpenApp.render();
+    assert.match(String(ctx.document.getElementById("venues").innerHTML), /Louis Armstrong/);
     assert.ok(String(ticker.innerHTML).length > 50);
     assert.match(String(ticker.innerHTML), /Session 1/);
     assert.match(String(ticker.innerHTML), /Session 27/);
